@@ -3,6 +3,7 @@
     padding: 0px;
     box-sizing: border-box;
     border-radius: 3px;
+    /* font-family: monospace; */
     -webkit-user-select: none; 
     -ms-user-select: none;     
     user-select: none; 
@@ -31,6 +32,7 @@
     justify-content: end;
     align-items: end;
     font-size: xx-large;
+    text-align: right;
     width: 365px;
     word-break: break-all;
 }   

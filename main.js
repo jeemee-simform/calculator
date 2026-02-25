@@ -100,23 +100,27 @@ function funEvaluate(fun, value) {
 }
 
 function replaceFunctionWithValue(str) {
-  // const functions = ["sin", "cos", "tan", "cosec", "sec", "cot", "log", "ln"];
+  let isError = false;
   const findFuncRegex =
-    /(sin|cos|tan|cosec|sec|cot|log|ln)\(([+-]?\d+(\.\d+)?)\)/g;
-
+    /(sin|cos|tan|cosec|sec|cot|log|ln)\(([+-]?\d*\.?\d+)\)/g;
   const result = str.replace(findFuncRegex, (match, fun, value) => {
-    if ((fun === "log" || fun === "ln") && parseInt(value) < 0) return 0;
+    console.log(match, fun, value);
+
+    if ((fun === "log" || fun === "ln") && Number(value) <= 0) {
+      isError = true;
+      return 0;
+    }
     return funEvaluate(fun, value);
   });
-  return result;
+  return { isError, result };
 }
 
 function output() {
   const str = display.innerText;
 
-  const result = replaceFunctionWithValue(str);
-  console.log(typeof result, result);
-  if (result === "0") {
+  const { isError, result } = replaceFunctionWithValue(str);
+  console.log(typeof result, result, isError);
+  if (isError) {
     display.innerText = "Error";
     return;
   }
