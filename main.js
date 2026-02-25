@@ -1,5 +1,14 @@
 const btnDiv = document.getElementsByClassName("btn-div")[0];
 const display = document.getElementById("display");
+const historyListDiv = document.getElementsByClassName("list")[0];
+
+showHistory();
+
+historyListDiv.addEventListener("click", (e) => {
+  if (e.target.className == "list-item") {
+    display.innerText = e.target.innerText.split(" ")[1];
+  }
+});
 
 btnDiv.addEventListener("click", (e) => {
   let id = e.target.id;
@@ -115,17 +124,234 @@ function replaceFunctionWithValue(str) {
   return { isError, result };
 }
 
-function output() {
-  const str = display.innerText;
+function tokenize(expr) {
+  const tokens = [];
+  let num = "";
+  let expectNumber = true;
 
-  const { isError, result } = replaceFunctionWithValue(str);
-  console.log(typeof result, result, isError);
-  if (isError) {
-    display.innerText = "Error";
-    return;
+  for (let i = 0; i < expr.length; i++) {
+    const char = expr[i];
+
+    // Number characters
+    if ("0123456789.".includes(char)) {
+      num += char;
+      expectNumber = false;
+      continue;
+    }
+
+    // Unary + or -
+    if ((char === "+" || char === "-") && expectNumber) {
+      num += char;
+      continue;
+    }
+
+    // Push number if exists
+    if (num !== "") {
+      tokens.push(Number(num));
+      num = "";
+    }
+
+    //  Binary + or -
+    if (char === "+" || char === "-") {
+      tokens.push(char);
+      expectNumber = true;
+      continue;
+    }
+
+    //  Other operators
+    if ("*/%^√!".includes(char)) {
+      tokens.push(char);
+
+      // postfix operator !
+      if (char === "!") {
+        expectNumber = false;
+      } else {
+        expectNumber = true;
+      }
+
+      continue;
+    }
+
+    //  Left bracket
+    if (char === "(") {
+      tokens.push(char);
+      expectNumber = true;
+      continue;
+    }
+
+    //  Right bracket
+    if (char === ")") {
+      tokens.push(char);
+      expectNumber = false;
+      continue;
+    }
   }
 
-  const ans = eval(result);
+  //  Push last number
+  if (num !== "") {
+    tokens.push(Number(num));
+  }
 
-  display.innerText = ans;
+  return tokens;
+}
+
+const precedence = {
+  "+": 1,
+  "-": 1,
+  "*": 2,
+  "/": 2,
+  "%": 2,
+  "^": 3,
+  "√": 4,
+  "!": 5,
+};
+
+const associativity = {
+  "+": "L",
+  "-": "L",
+  "*": "L",
+  "/": "L",
+  "%": "L",
+  "^": "R",
+  "√": "R",
+  "!": "L",
+};
+
+function infixToPostfix(tokens) {
+  const output = [];
+  const stack = [];
+
+  for (const token of tokens) {
+    if (typeof token === "number") {
+      output.push(token);
+    } else if (token === "(") {
+      stack.push(token);
+    } else if (token === ")") {
+      while (stack.length && stack[stack.length - 1] !== "(") {
+        output.push(stack.pop());
+      }
+      stack.pop();
+    } else {
+      while (
+        stack.length &&
+        stack[stack.length - 1] !== "(" &&
+        ((associativity[token] === "L" &&
+          precedence[token] <= precedence[stack[stack.length - 1]]) ||
+          (associativity[token] === "R" &&
+            precedence[token] < precedence[stack[stack.length - 1]]))
+      ) {
+        output.push(stack.pop());
+      }
+      stack.push(token);
+    }
+  }
+
+  while (stack.length) output.push(stack.pop());
+
+  return output;
+}
+
+function evaluatePostfix(postfix) {
+  const stack = [];
+
+  for (const token of postfix) {
+    if (typeof token === "number") {
+      stack.push(token);
+    } else {
+      if (token === "+") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a + b);
+      } else if (token === "-") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a - b);
+      } else if (token === "*") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a * b);
+      } else if (token === "/") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a / b);
+      } else if (token === "%") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a % b);
+      } else if (token === "^") {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(Math.pow(a, b));
+      } else if (token === "√") {
+        const a = stack.pop();
+        stack.push(Math.sqrt(a));
+      } else if (token === "!") {
+        const a = stack.pop();
+        stack.push(factorial(a));
+      }
+    }
+  }
+
+  return stack[0];
+}
+
+function factorial(n) {
+  if (n < 0) return NaN;
+  if (n === 0 || n === 1) return 1;
+  let res = 1;
+  for (let i = 2; i <= n; i++) res *= i;
+  return res;
+}
+
+function saveHistory(str) {
+  if (!localStorage.getItem("history")) {
+    localStorage.setItem("history", JSON.stringify([]));
+  }
+
+  const arr = JSON.parse(localStorage.getItem("history"));
+  console.log(arr);
+
+  arr.push(str);
+
+  localStorage.setItem("history", JSON.stringify(arr));
+}
+
+function showHistory() {
+  const historyList = document.getElementsByClassName("list")[0];
+
+  const arr = JSON.parse(localStorage.getItem("history")) || [];
+
+  historyList.innerHTML = "";
+  arr.forEach((item, index) => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.textContent = `${index + 1}. ${item}`;
+    historyList.appendChild(div);
+  });
+}
+
+function output() {
+  try {
+    const str = display.innerText;
+
+    const { isError, result } = replaceFunctionWithValue(str);
+    if (isError || result === "") {
+      display.innerText = "Error";
+      return;
+    }
+    const tokens = tokenize(result);
+
+    const postfix = infixToPostfix(tokens);
+
+    const ans = evaluatePostfix(postfix);
+
+    if (ans && ans != "Error") {
+      saveHistory(str);
+      showHistory();
+    }
+
+    display.innerText = ans ? ans : "Error";
+  } catch (e) {
+    display.innerText = "Error";
+  }
 }
