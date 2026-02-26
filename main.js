@@ -54,7 +54,7 @@ function valid() {
 
   // check char alowed or not
   const allowedPattern =
-    /^(?:3\.14159|2\.71828|sin\(|cos\(|cosec\(|sec\(|cot\(|ten\(|log\(|ln\(|\^\-1|\^2|[0-9+\-*/%^√!().])+$/;
+    /^(?:3\.14159|2\.71828|sin\(|cos\(|cosec\(|sec\(|cot\(|tan\(|log\(|ln\(|\^\-1|\^2|[0-9+\-*/%^√!().])+$/;
   if (!allowedPattern.test(str)) return false;
 
   // check desimal validation
@@ -79,11 +79,11 @@ function valid() {
 
   //in valid prefix operator
   const invalidPrefixOperator =
-    /(\d|\)|!|\^2|\^\-1)(√|sin\(|cos\(|cosec\(|sec\(|cot\(|ten\(|log\(|ln\()/;
+    /(\d|\)|!|\^2|\^\-1)(√|sin\(|cos\(|cosec\(|sec\(|cot\(|tan\(|log\(|ln\()/;
   if (invalidPrefixOperator.test(str)) return false;
 
   // invalid function usege
-  const invalidFunctionUsage = /(sin|cos|cosec|sec|cot|ten|log|ln)(?!\()/;
+  const invalidFunctionUsage = /(sin|cos|cosec|sec|cot|tan|log|ln)(?!\()/;
   if (invalidFunctionUsage.test(str)) return false;
 
   // invalid parenthesis ending: only !, numbers, or functions allowed before ')'
@@ -93,27 +93,6 @@ function valid() {
   return true;
 }
 
-function funEvaluate(fun, value) {
-  switch (fun) {
-    case "sin":
-      return Math.sin((value * Math.PI) / 180);
-    case "cos":
-      return Math.cos((value * Math.PI) / 180);
-    case "tan":
-      return Math.tan((value * Math.PI) / 180);
-    case "cosec":
-      return 1 / Math.sin((value * Math.PI) / 180);
-    case "sec":
-      return 1 / Math.cos((value * Math.PI) / 180);
-    case "cot":
-      return 1 / Math.tan((value * Math.PI) / 180);
-    case "log":
-      return Math.log10(value);
-    case "ln":
-      return Math.log(value);
-  }
-}
-
 const FUNCTIONS = [
   "sin",
   "cos",
@@ -121,7 +100,7 @@ const FUNCTIONS = [
   "cosec",
   "sec",
   "cot",
-  "ten",
+  "tan",
   "log",
   "ln",
 ];
@@ -288,6 +267,7 @@ function evaluatePostfix(postfix) {
           break;
         case "cos":
           result = Math.cos((a * Math.PI) / 180);
+          console.log(a, result);
           break;
         case "tan":
           result = Math.tan((a * Math.PI) / 180);
@@ -301,8 +281,8 @@ function evaluatePostfix(postfix) {
         case "cot":
           result = 1 / Math.tan((a * Math.PI) / 180);
           break;
-        case "ten":
-          result = Math.tan((a * Math.PI) / 180); // if needed, adjust
+        case "tan":
+          result = Math.tan((a * Math.PI) / 180);
           break;
         case "log":
           result = a <= 0 ? NaN : Math.log10(a);
@@ -311,7 +291,7 @@ function evaluatePostfix(postfix) {
           result = a <= 0 ? NaN : Math.log(a);
           break;
       }
-      stack.push(result);
+      stack.push(result.toFixed(2));
     } else {
       // Operators
       if (token === "+") {
@@ -396,8 +376,11 @@ function output() {
       display.innerText = "Error";
       return;
     }
+    console.log("token  ", tokens);
 
     const postfix = infixToPostfix(tokens);
+    console.log("postfix  ", postfix);
+
     const ans = evaluatePostfix(postfix);
 
     if (!isNaN(ans)) {
