@@ -1,6 +1,7 @@
 const btnDiv = document.getElementsByClassName("btn-div")[0];
 const display = document.getElementById("display");
 const historyListDiv = document.getElementsByClassName("list")[0];
+const clear = document.getElementsByClassName("clear")[0];
 
 showHistory();
 
@@ -8,6 +9,11 @@ historyListDiv.addEventListener("click", (e) => {
   if (e.target.className == "list-item") {
     display.innerText = e.target.innerText.split(" ")[1];
   }
+});
+
+clear.addEventListener("click", (e) => {
+  localStorage.setItem("history", JSON.stringify([]));
+  showHistory();
 });
 
 btnDiv.addEventListener("click", (e) => {
