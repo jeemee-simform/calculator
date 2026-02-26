@@ -114,91 +114,98 @@ function funEvaluate(fun, value) {
   }
 }
 
-function replaceFunctionWithValue(str) {
-  let isError = false;
-  const findFuncRegex =
-    /(sin|cos|tan|cosec|sec|cot|log|ln)\(([+-]?\d*\.?\d+)\)/g;
-  const result = str.replace(findFuncRegex, (match, fun, value) => {
-    console.log(match, fun, value);
-
-    if ((fun === "log" || fun === "ln") && Number(value) <= 0) {
-      isError = true;
-      return 0;
-    }
-    return funEvaluate(fun, value);
-  });
-  return { isError, result };
-}
+const FUNCTIONS = [
+  "sin",
+  "cos",
+  "tan",
+  "cosec",
+  "sec",
+  "cot",
+  "ten",
+  "log",
+  "ln",
+];
 
 function tokenize(expr) {
-  const tokens = [];
-  let num = "";
-  let expectNumber = true;
+  try {
+    const tokens = [];
+    let i = 0;
+    let expectNumber = true;
 
-  for (let i = 0; i < expr.length; i++) {
-    const char = expr[i];
+    while (i < expr.length) {
+      const char = expr[i];
 
-    // Number characters
-    if ("0123456789.".includes(char)) {
-      num += char;
-      expectNumber = false;
-      continue;
-    }
-
-    // Unary + or -
-    if ((char === "+" || char === "-") && expectNumber) {
-      num += char;
-      continue;
-    }
-
-    // Push number if exists
-    if (num !== "") {
-      tokens.push(Number(num));
-      num = "";
-    }
-
-    //  Binary + or -
-    if (char === "+" || char === "-") {
-      tokens.push(char);
-      expectNumber = true;
-      continue;
-    }
-
-    //  Other operators
-    if ("*/%^√!".includes(char)) {
-      tokens.push(char);
-
-      // postfix operator !
-      if (char === "!") {
-        expectNumber = false;
-      } else {
-        expectNumber = true;
+      if (char === " ") {
+        i++;
+        continue;
       }
 
-      continue;
+      if (
+        "0123456789.".includes(char) ||
+        ((char === "+" || char === "-") && expectNumber)
+      ) {
+        let num = char;
+        i++;
+        while (i < expr.length && "0123456789.".includes(expr[i])) {
+          num += expr[i];
+          i++;
+        }
+        tokens.push(Number(num));
+        expectNumber = false;
+        continue;
+      }
+
+      if (/[a-zA-Z]/.test(char)) {
+        let name = char;
+        i++;
+        while (i < expr.length && /[a-zA-Z]/.test(expr[i])) {
+          name += expr[i];
+          i++;
+        }
+        if (!FUNCTIONS.includes(name)) {
+          throw new Error("Unknown function: " + name);
+        }
+        tokens.push(name);
+        expectNumber = true;
+        continue;
+      }
+
+      if ("*/%^√!".includes(char)) {
+        tokens.push(char);
+        expectNumber = char !== "!";
+        i++;
+        continue;
+      }
+
+      if (char === "+" || char === "-") {
+        tokens.push(char);
+        expectNumber = true;
+        i++;
+        continue;
+      }
+
+      if (char === "(") {
+        tokens.push(char);
+        expectNumber = true;
+        i++;
+        continue;
+      }
+
+      if (char === ")") {
+        tokens.push(char);
+        expectNumber = false;
+        i++;
+        continue;
+      }
+
+      throw new Error("Invalid character: " + char);
     }
 
-    //  Left bracket
-    if (char === "(") {
-      tokens.push(char);
-      expectNumber = true;
-      continue;
-    }
-
-    //  Right bracket
-    if (char === ")") {
-      tokens.push(char);
-      expectNumber = false;
-      continue;
-    }
+    return tokens;
+  } catch (err) {
+    console.log(err);
+    return "Error";
   }
-
-  //  Push last number
-  if (num !== "") {
-    tokens.push(Number(num));
-  }
-
-  return tokens;
 }
 
 const precedence = {
@@ -230,6 +237,8 @@ function infixToPostfix(tokens) {
   for (const token of tokens) {
     if (typeof token === "number") {
       output.push(token);
+    } else if (FUNCTIONS.includes(token)) {
+      stack.push(token);
     } else if (token === "(") {
       stack.push(token);
     } else if (token === ")") {
@@ -237,10 +246,15 @@ function infixToPostfix(tokens) {
         output.push(stack.pop());
       }
       stack.pop();
+
+      if (stack.length && FUNCTIONS.includes(stack[stack.length - 1])) {
+        output.push(stack.pop());
+      }
     } else {
       while (
         stack.length &&
         stack[stack.length - 1] !== "(" &&
+        !FUNCTIONS.includes(stack[stack.length - 1]) &&
         ((associativity[token] === "L" &&
           precedence[token] <= precedence[stack[stack.length - 1]]) ||
           (associativity[token] === "R" &&
@@ -252,7 +266,9 @@ function infixToPostfix(tokens) {
     }
   }
 
-  while (stack.length) output.push(stack.pop());
+  while (stack.length) {
+    output.push(stack.pop());
+  }
 
   return output;
 }
@@ -263,7 +279,41 @@ function evaluatePostfix(postfix) {
   for (const token of postfix) {
     if (typeof token === "number") {
       stack.push(token);
+    } else if (FUNCTIONS.includes(token)) {
+      const a = stack.pop();
+      let result;
+      switch (token) {
+        case "sin":
+          result = Math.sin((a * Math.PI) / 180);
+          break;
+        case "cos":
+          result = Math.cos((a * Math.PI) / 180);
+          break;
+        case "tan":
+          result = Math.tan((a * Math.PI) / 180);
+          break;
+        case "cosec":
+          result = 1 / Math.sin((a * Math.PI) / 180);
+          break;
+        case "sec":
+          result = 1 / Math.cos((a * Math.PI) / 180);
+          break;
+        case "cot":
+          result = 1 / Math.tan((a * Math.PI) / 180);
+          break;
+        case "ten":
+          result = Math.tan((a * Math.PI) / 180); // if needed, adjust
+          break;
+        case "log":
+          result = a <= 0 ? NaN : Math.log10(a);
+          break;
+        case "ln":
+          result = a <= 0 ? NaN : Math.log(a);
+          break;
+      }
+      stack.push(result);
     } else {
+      // Operators
       if (token === "+") {
         const b = stack.pop();
         const a = stack.pop();
@@ -302,8 +352,9 @@ function evaluatePostfix(postfix) {
 }
 
 function factorial(n) {
-  if (n < 0) return NaN;
+  if (n < 0 || !Number.isInteger(n)) return NaN;
   if (n === 0 || n === 1) return 1;
+
   let res = 1;
   for (let i = 2; i <= n; i++) res *= i;
   return res;
@@ -340,23 +391,21 @@ function output() {
   try {
     const str = display.innerText;
 
-    const { isError, result } = replaceFunctionWithValue(str);
-    if (isError || result === "") {
+    const tokens = tokenize(str);
+    if (tokens === "Error") {
       display.innerText = "Error";
       return;
     }
-    const tokens = tokenize(result);
 
     const postfix = infixToPostfix(tokens);
-
     const ans = evaluatePostfix(postfix);
 
-    if (ans && ans != "Error") {
+    if (!isNaN(ans)) {
       saveHistory(str);
       showHistory();
     }
 
-    display.innerText = ans ? ans : "Error";
+    display.innerText = isNaN(ans) ? "Error" : ans;
   } catch (e) {
     display.innerText = "Error";
   }
