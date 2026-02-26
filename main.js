@@ -291,7 +291,7 @@ function evaluatePostfix(postfix) {
           result = a <= 0 ? NaN : Math.log(a);
           break;
       }
-      stack.push(result.toFixed(2));
+      stack.push(result.toFixed(15));
     } else {
       // Operators
       if (token === "+") {
